@@ -1,0 +1,56 @@
+{
+    "name": "b7s/lara-ink",
+    "description": "✒️ LaraInk - Turn your files into a standalone SPA with Alpine.js, powered by Laravel REST API + Bearer Token.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": ">=8.3",
+        "laravel/framework": ">=11.0",
+        "nunomaduro/termwind": "^2.3"
+    },
+    "require-dev": {
+        "pestphp/pest": "^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "B7s\\LaraInk\\": "src/"
+        },
+        "files": [
+            "src/Support/Helpers/helper.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "B7s\\LaraInk\\Providers\\LaraInkServiceProvider"
+            ],
+            "aliases": {}
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "post-install-cmd": [
+            "B7s\\LaraInk\\Console\\InstallScripts::install"
+        ],
+        "post-update-cmd": [
+            "B7s\\LaraInk\\Console\\InstallScripts::install"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Bruno Tenorio",
+            "email": "b7s@outlook.com"
+        }
+    ]
+}
