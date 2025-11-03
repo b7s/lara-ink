@@ -39,7 +39,7 @@ ink_make()
     ->auth(true); // requires any valid login
 
 <<<HTML
-<h1>{{ __('app.title') }}</h1>
+<h1>{{ trans('app.title') }}</h1>
 HTML;
 
 <<<JS
@@ -155,7 +155,7 @@ php artisan lara-ink:build
 - Gera HTML, JS, CSS com cache busting  
 - Salva em `public/pages/` e `public/build/`  
 - Gera `index.html` com roteador SPA  
-- Executa **Vite 6+** para empacotar assets  
+- Executa **Vite 6+** para empacotar assets and get hot reload working
 
 ---
 
@@ -220,16 +220,26 @@ headers: {
 ink_make()
     ->cache(600)
     ->layout('admin/panel')
-    ->title('Admin Panel')
+    ->title(__('app.admin_panel'))
+    ->seo([
+        'description' => __('app.admin_panel'),
+        'keywords' => 'admin, panel',
+        // ...
+    ])
     ->auth(true)
-    ->middleware('role:admin');
+    ->middleware(['verified', 'role:admin']);
 ```
 
 ---
 
-## 18. Controle de acesso
+## 18. Controle de acesso e Middleware
 - **auth(true)** → exige login válido (qualquer usuário autenticado).  
-- **middleware('...')** → exige login + regra adicional validada no backend.  
+- **middleware('...')** → aceita string ou array de middlewares.
+  - String: `->middleware('role:admin')`
+  - Array: `->middleware(['auth', 'verified', 'role:admin'])`
+- Os middlewares são **automaticamente registrados nas rotas do Laravel** durante o build.
+- A stack de middleware é: `['web', 'auth:sanctum', ...custom_middlewares]`
+- Middlewares são aplicados no servidor (Laravel) e informações são passadas ao frontend (JavaScript).  
 
 ---
 
@@ -240,7 +250,7 @@ O pacote registra automaticamente as rotas necessárias para autenticação e au
 ---
 
 ## 20. Tradução integrada
-- O compilador coleta todas as chaves usadas em `__()`, `trans()`, `trans_choice()`.  
+- O compilador coleta todas as chaves usadas em `trans()`, `trans()`, `trans_choice()`.  
 - Gera `lara-ink-lang.js` com apenas as traduções necessárias.  
 - Estrutura JSON por locale (`en_US`, `pt_BR`, etc.).  
 - O SPA usa `lara_ink.set_locale('pt_BR')` para trocar idioma em tempo real.  
@@ -260,7 +270,7 @@ Funções utilitárias centralizadas:
 ## 22. Substituição de PHP → JS/AlpineJS
 - `{{ $var }}` → `x-text="var"`  
 - `if/foreach` → `x-if` / `x-for`  
-- `__('key')` → `lara_ink.trans('key')`  
+- `trans('key')` → `lara_ink.trans('key')`  
 
 ---
 
@@ -268,18 +278,3 @@ Funções utilitárias centralizadas:
 - Vite 6+ como bundler oficial.  
 - Configuração mínima em `vite.config.js`.  
 - Gera assets com hash para cache busting.  
-
----
-
-## ✅ Conclusão
-O LaraInk é um **framework DSL para Laravel** que gera um **SPA independente**, com:  
-- Navegação rápida e cache configurável.  
-- Comunicação via API com Bearer Token.  
-- Layouts flexíveis em subpastas.  
-- Configuração global e por página.  
-- Controle de acesso robusto (`auth` e `middleware`).  
-- Rotas de API prontas com prefixo customizável.  
-- Tradução multilíngue integrada.  
-- API de frontend unificada no objeto `lara_ink`.  
-- Compilação moderna com **Vite 6+**.  
-- `ink_route()` validando rotas durante a compilação, parâmetros e método HTTP (incluindo suporte a `@method()` do Laravel).  

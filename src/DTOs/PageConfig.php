@@ -8,13 +8,14 @@ final class PageConfig
 {
     /**
      * @param array<string, mixed>|null $seo SEO configuration array from SeoConfig::toArray()
+     * @param array<int, string>|null $middleware Array of middleware names
      */
     public function __construct(
         public readonly ?int $cache = null,
         public readonly ?string $layout = null,
         public readonly ?string $title = null,
         public readonly bool $auth = false,
-        public readonly ?string $middleware = null,
+        public readonly ?array $middleware = null,
         public readonly ?array $seo = null,
     ) {}
 

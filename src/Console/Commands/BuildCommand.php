@@ -6,7 +6,6 @@ namespace B7s\LaraInk\Console\Commands;
 
 use B7s\LaraInk\Services\BuildService;
 use Illuminate\Console\Command;
-use function Termwind\render;
 
 final class BuildCommand extends Command
 {
@@ -22,35 +21,27 @@ final class BuildCommand extends Command
 
     public function handle(): int
     {
-        render(<<<HTML
-<div class="mb-1">
-    <span class="px-2 py-1 bg-purple-600 text-white font-bold uppercase">LaraInk</span>
-    <div class="mt-1 text-slate-400">[Building SPA bundle]</div>
-</div>
-HTML);
-
-        render('<div class="px-2 py-1 bg-slate-800 text-slate-200">Preparing build pipeline...</div>');
+        $this->components->info('LaraInk - Building SPA bundle');
+        $this->newLine();
+        
+        $this->line('  <fg=gray>Preparing build pipeline...</>');
 
         $result = $this->buildService->build();
 
         if ($result['success']) {
-            render(<<<HTML
-<div class="mt-1">
-    <div class="px-2 py-1 bg-green-600 text-white font-bold">✅ Build completed</div>
-    <div class="px-2 py-1 text-green-200">{$result['message']}</div>
-    <div class="px-2 py-1 text-green-100"><span class="font-bold">{$result['pages']}</span> page(s) compiled</div>
-</div>
-HTML);
+            $this->newLine();
+            $this->components->success('Build completed');
+            $this->line("  <fg=green>{$result['message']}</>");
+            $this->line("  <fg=green;options=bold>{$result['pages']}</> <fg=green>page(s) compiled</>");
+            $this->newLine();
 
             return self::SUCCESS;
         }
 
-        render(<<<HTML
-<div class="mt-1">
-    <div class="px-2 py-1 bg-red-600 text-white font-bold">⛔ Build failed</div>
-    <div class="px-2 py-1 text-red-200">{$result['message']}</div>
-</div>
-HTML);
+        $this->newLine();
+        $this->components->error('Build failed');
+        $this->line("  <fg=red>{$result['message']}</>");
+        $this->newLine();
 
         return self::FAILURE;
     }

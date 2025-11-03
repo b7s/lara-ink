@@ -11,6 +11,7 @@ final class SpaGeneratorService
     public function __construct(
         private readonly RouteService $routeService,
         private readonly CacheService $cacheService,
+        private readonly ViteService $viteService,
     ) {}
 
     /**
@@ -37,17 +38,23 @@ final class SpaGeneratorService
     private function buildIndexTemplate(array $routes, string $cacheManifest, string $scriptTags, string $styleTags): string
     {
         $routesJson = json_encode($routes, JSON_PRETTY_PRINT);
-        $apiBaseUrl = url((ink_config('api_base_url') ?? '') . ink_config('auth.route.prefix', '/api/ink'));
+        $apiBaseUrl = url((ink_config('api_base_url') ?? '') . ink_config('auth.route.api_prefix', '/api/ink'));
         $loginRoute = ink_config('auth.route.login', '/login');
         $unauthorizedRoute = ink_config('auth.route.unauthorized', '/unauthorized');
 
-        // Load template stub
-        $templatePath = __DIR__ . '/../../stubs/index-template.blade.php';
+        // Load template stub - use replacement-template for SPA index.html
+        $templatePath = __DIR__ . '/../../stubs/spa-shell.blade.php';
         $template = file_get_contents($templatePath);
-        
+
         if ($template === false) {
             throw new \RuntimeException('Failed to load index template stub');
         }
+
+        // Generate asset URLs with hash from Vite manifest
+        $appCssUrl = $this->viteService->getAssetUrl('app.css');
+        $appJsUrl = $this->viteService->getAssetUrl('app.js');
+        $buildPath = ink_asset_url('build');
+        $pagesPath = ink_asset_url('pages');
 
         // Replace placeholders with actual values
         $template = str_replace(
@@ -60,6 +67,11 @@ final class SpaGeneratorService
                 '__APP_LOCALE__',
                 '__SCRIPT_TAGS__',
                 '__STYLE_TAGS__',
+                '__BUILD_PATH__',
+                '__PAGES_PATH__',
+                '__APP_CSS_URL__',
+                '__APP_JS_URL__',
+                '__VITE_HOT_CLIENT__',
             ],
             [
                 $routesJson,
@@ -70,6 +82,11 @@ final class SpaGeneratorService
                 app()->getLocale(),
                 $scriptTags,
                 $styleTags,
+                $buildPath,
+                $pagesPath,
+                $appCssUrl,
+                $appJsUrl,
+                $this->viteService->activeHotReload(),
             ],
             $template
         );
@@ -82,8 +99,12 @@ final class SpaGeneratorService
      */
     private function buildScriptTags(array $scriptPaths): string
     {
-        return collect($scriptPaths)
-            ->map(fn (string $path) => sprintf('<script src="%s"></script>', $path))
+        // Filter out app.js since it's already included via __APP_JS_URL__
+        $filtered = collect($scriptPaths)
+            ->filter(fn(string $path) => !str_contains($path, '/app-') && !str_ends_with($path, '/app.js'));
+
+        return $filtered
+            ->map(fn(string $path) => sprintf('<script src="%s"></script>', $path))
             ->implode(PHP_EOL . '    ');
     }
 
@@ -97,7 +118,7 @@ final class SpaGeneratorService
         }
 
         return collect($stylePaths)
-            ->map(fn (string $path) => sprintf('<link rel="stylesheet" href="%s">', $path))
+            ->map(fn(string $path) => sprintf('<link rel="stylesheet" href="%s">', $path))
             ->implode(PHP_EOL . '    ');
     }
 }

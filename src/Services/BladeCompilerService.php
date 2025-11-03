@@ -8,12 +8,17 @@ final class BladeCompilerService
 {
     /**
      * Compile Blade directives to Alpine.js syntax
+     * 
+     * Note: {{ }} echos are NOT compiled here because they need to be
+     * processed by Blade first to handle PHP variables and expressions.
+     * Only control structures (@if, @foreach, etc.) are converted to Alpine.js.
      */
     public function compile(string $blade): string
     {
         $compiled = $blade;
 
         $compiled = $this->compileEchos($compiled);
+        
         $compiled = $this->compileIf($compiled);
         $compiled = $this->compileForeach($compiled);
         $compiled = $this->compileFor($compiled);
@@ -30,28 +35,39 @@ final class BladeCompilerService
 
     private function compileEchos(string $content): string
     {
-        // {{ $variable }} → <span x-text="variable"></span>
-        $content = preg_replace(
-            '/\{\{\s*\$(\w+)\s*\}\}/',
-            '<span x-text="$1"></span>',
-            $content
-        );
-
-        // {{ $variable->property }} → <span x-text="variable.property"></span>
-        $content = preg_replace(
-            '/\{\{\s*\$(\w+)->(\w+)\s*\}\}/',
-            '<span x-text="$1.$2"></span>',
+        // General pattern for variable echos including nested access
+        $content = preg_replace_callback(
+            '/\{\{\s*(\$(?:[A-Za-z_][\\w]*)(?:->\w+|\[[^\]]+\])*)\s*\}\}/',
+            fn (array $matches) => '<span x-text="' . $this->normalizePhpExpression($matches[1]) . '"></span>',
             $content
         );
 
         // {!! $html !!} → <span x-html="html"></span>
-        $content = preg_replace(
-            '/\{!!\s*\$(\w+)\s*!!\}/',
-            '<span x-html="$1"></span>',
+        $content = preg_replace_callback(
+            '/\{!!\s*(\$(?:[A-Za-z_][\\w]*)(?:->\w+|\[[^\]]+\])*)\s*!!\}/',
+            fn (array $matches) => '<span x-html="' . $this->normalizePhpExpression($matches[1]) . '"></span>',
             $content
         );
 
         return $content;
+    }
+
+    private function normalizePhpExpression(string $expression): string
+    {
+        // Remove leading dollar signs
+        $expression = preg_replace('/\$/', '', $expression, 1);
+
+        // Convert object access to dot notation
+        $expression = str_replace('->', '.', $expression);
+
+        // Convert array access with string keys to dot notation
+        $expression = preg_replace('/\[\'([^\']+)\'\]/', '.$1', $expression);
+        $expression = preg_replace('/\["([^\"]+)"\]/', '.$1', $expression);
+
+        // Keep numeric indexes as array access
+        $expression = preg_replace('/\[(\d+)\]/', '[$1]', $expression);
+
+        return ltrim($expression, '.');
     }
 
     private function compileIf(string $content): string

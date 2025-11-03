@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace B7s\LaraInk\Services;
 
 use B7s\LaraInk\DTOs\PageConfig;
+use B7s\LaraInk\DTOs\PageVariable;
 use B7s\LaraInk\DTOs\ParsedPage;
 use Illuminate\Support\Facades\App;
 
@@ -25,13 +26,17 @@ final class DslParserService
             throw new \RuntimeException("Failed to read file: {$filePath}");
         }
 
-        [$config, $bladeContent] = $this->extractConfigAndContent($content);
+        [$config, $bladeContent, $phpBlock] = $this->extractConfigAndContent($content);
+        $variables = $this->extractAndProcessVariables($phpBlock, $filePath);
 
         $slug = $this->generateSlug($filePath);
         $params = $this->extractRouteParams($slug);
-        $translations = $this->extractTranslations($bladeContent);
+        $translations = $this->extractTranslations($bladeContent, $phpBlock);
+
+        $pageId = $this->generatePageId($filePath);
 
         return new ParsedPage(
+            id: $pageId,
             slug: $slug,
             filePath: $filePath,
             config: $config,
@@ -40,11 +45,12 @@ final class DslParserService
             css: '',
             params: $params,
             translations: $translations,
+            variables: $variables,
         );
     }
 
     /**
-     * @return array{PageConfig, string}
+     * @return array{PageConfig, string, string}
      */
     private function extractConfigAndContent(string $content): array
     {
@@ -60,7 +66,7 @@ final class DslParserService
                 continue;
             }
             
-            if ($inPhpBlock && ($trimmed === '?>' || $trimmed === '')) {
+            if ($inPhpBlock && $trimmed === '?>') {
                 $configEndLine = $index + 1;
                 break;
             }
@@ -71,7 +77,7 @@ final class DslParserService
         
         $config = $this->extractConfig($configBlock);
         
-        return [$config, trim($bladeContent)];
+        return [$config, trim($bladeContent), $configBlock];
     }
 
     private function extractConfig(string $content): PageConfig
@@ -103,8 +109,18 @@ final class DslParserService
             $auth = true;
         }
 
-        if (preg_match('/->middleware\([\'"]([^\'"]+)[\'"]\)/', $content, $matches)) {
-            $middleware = $matches[1];
+        // Extract middleware - supports both string and array syntax
+        if (preg_match('/->middleware\(\[([^\]]+)\]\)/', $content, $matches)) {
+            // Array syntax: ->middleware(['auth', 'verified'])
+            $middlewareString = $matches[1];
+            $middleware = array_map(
+                fn($item) => trim($item, " '\"\t\n\r\0\x0B"),
+                explode(',', $middlewareString)
+            );
+            $middleware = array_filter($middleware);
+        } elseif (preg_match('/->middleware\([\'"]([^\'"]+)[\'"]\)/', $content, $matches)) {
+            // String syntax: ->middleware('auth')
+            $middleware = [$matches[1]];
         }
 
         $seo = $this->extractSeoConfig($content);
@@ -173,24 +189,179 @@ final class DslParserService
         return '';
     }
 
-    private function extractVariables(string $content): void
+    /**
+     * Extract and process variables from PHP block
+     * 
+     * @param string $phpBlock
+     * @param string $filePath
+     * @return array<string, PageVariable>
+     * @throws \RuntimeException
+     */
+    private function extractAndProcessVariables(string $phpBlock, string $filePath): array
     {
-        if (preg_match_all('/\$(\w+)\s*=\s*([^;]+);/', $content, $matches, PREG_SET_ORDER)) {
-            foreach ($matches as $match) {
-                $varName = $match[1];
-                $varValue = trim($match[2], '\'"');
-                $this->variables[$varName] = $varValue;
+        $variables = [];
+        
+        // Remove PHP tags and ink_make() calls
+        $phpBlock = preg_replace('/<\?php|\?>/', '', $phpBlock);
+        $phpBlock = preg_replace('/ink_make\(\).*?;/s', '', $phpBlock);
+        
+        // Create a temporary file to execute and extract variables
+        $tempFile = tempnam(sys_get_temp_dir(), 'lara_ink_');
+        
+        try {
+            // Wrap code to capture variables
+            $code = <<<'PHP'
+<?php
+return (function() {
+    $__captured_vars = [];
+    
+    try {
+PHP;
+            $code .= $phpBlock;
+            $code .= <<<'PHP'
+
+        // Capture all defined variables
+        foreach (get_defined_vars() as $name => $value) {
+            if ($name !== '__captured_vars') {
+                $__captured_vars[$name] = $value;
             }
         }
+        
+        return ['success' => true, 'vars' => $__captured_vars];
+    } catch (\Throwable $e) {
+        return ['success' => false, 'error' => $e->getMessage(), 'line' => $e->getLine()];
+    }
+})();
+PHP;
+            
+            file_put_contents($tempFile, $code);
+            $result = include $tempFile;
+            
+            if (!$result['success']) {
+                throw new \RuntimeException(
+                    "Error processing variables in file: {$filePath}\n" .
+                    "Line: {$result['line']}\n" .
+                    "Error: {$result['error']}"
+                );
+            }
+            
+            foreach ($result['vars'] as $name => $value) {
+                $variables[$name] = $this->createPageVariable($name, $value, $filePath);
+            }
+            
+        } finally {
+            if (file_exists($tempFile)) {
+                unlink($tempFile);
+            }
+        }
+        
+        return $variables;
+    }
+    
+    /**
+     * Create a PageVariable with type detection and conversion
+     * 
+     * @param string $name
+     * @param mixed $value
+     * @param string $filePath
+     * @return PageVariable
+     * @throws \RuntimeException
+     */
+    private function createPageVariable(string $name, mixed $value, string $filePath): PageVariable
+    {
+        $type = $this->detectVariableType($value);
+        $alpineVarName = 'var_' . $name . '_' . bin2hex(random_bytes(4));
+        
+        // Convert complex objects to arrays
+        if (in_array($type, ['collection', 'eloquent', 'object'])) {
+            if (method_exists($value, 'toArray')) {
+                try {
+                    $value = $value->toArray();
+                    $type = 'array';
+                } catch (\Throwable $e) {
+                    throw new \RuntimeException(
+                        "Error converting variable '\${$name}' to array in file: {$filePath}\n" .
+                        "The object has a toArray() method but it failed with error: {$e->getMessage()}\n" .
+                        "Possible issue: The object might have dependencies that are not available during build time."
+                    );
+                }
+            } else {
+                throw new \RuntimeException(
+                    "Error processing variable '\${$name}' in file: {$filePath}\n" .
+                    "Variable type: {$type}\n" .
+                    "The variable is a complex object without a toArray() method.\n" .
+                    "Please convert it to a simple array, or implement toArray() method."
+                );
+            }
+        }
+        
+        return new PageVariable(
+            name: $name,
+            value: $value,
+            type: $type,
+            alpineVarName: $alpineVarName,
+        );
+    }
+    
+    /**
+     * Detect the type of a variable
+     * 
+     * @param mixed $value
+     * @return string
+     */
+    private function detectVariableType(mixed $value): string
+    {
+        if (is_string($value)) {
+            return 'string';
+        }
+        
+        if (is_int($value)) {
+            return 'int';
+        }
+        
+        if (is_float($value)) {
+            return 'float';
+        }
+        
+        if (is_bool($value)) {
+            return 'bool';
+        }
+        
+        if (is_array($value)) {
+            return 'array';
+        }
+        
+        if (is_object($value)) {
+            $class = get_class($value);
+            
+            if (str_contains($class, 'Illuminate\\Support\\Collection')) {
+                return 'collection';
+            }
+            
+            if (str_contains($class, 'Illuminate\\Database\\Eloquent')) {
+                return 'eloquent';
+            }
+            
+            return 'object';
+        }
+        
+        return 'unknown';
     }
 
     private function generateSlug(string $filePath): string
     {
-        $basePath = App::basePath('resources/lara-ink/pages/');
+        $basePath = rtrim(ink_resource_path('pages'), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
         $relativePath = str_replace($basePath, '', $filePath);
         $relativePath = str_replace('.php', '', $relativePath);
         
         return '/' . ltrim($relativePath, '/');
+    }
+
+    private function generatePageId(string $filePath): string
+    {
+        $hash = substr(sha1($filePath), 0, 12);
+
+        return 'page-' . $hash;
     }
 
     /**
@@ -212,23 +383,12 @@ final class DslParserService
     /**
      * @return array<string>
      */
-    private function extractTranslations(string $content): array
+    private function extractTranslations(string $bladeContent, string $phpBlock): array
     {
-        $translations = [];
-        
-        $patterns = [
-            '/__\([\'"]([^\'"]+)[\'"]\)/',
-            '/trans\([\'"]([^\'"]+)[\'"]\)/',
-            '/trans_choice\([\'"]([^\'"]+)[\'"]\)/',
-        ];
+        $bladeKeys = TranslationService::extractKeysFromContent($bladeContent);
+        $configKeys = TranslationService::extractKeysFromContent($phpBlock);
 
-        foreach ($patterns as $pattern) {
-            if (preg_match_all($pattern, $content, $matches)) {
-                $translations = array_merge($translations, $matches[1]);
-            }
-        }
-
-        return array_unique($translations);
+        return array_values(array_unique(array_merge($bladeKeys, $configKeys)));
     }
 
     /**

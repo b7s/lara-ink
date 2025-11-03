@@ -21,7 +21,7 @@ final class LaraInk
     private ?string $layout = null;
     private ?string $title = null;
     private bool $auth = false;
-    private ?string $middleware = null;
+    private ?array $middleware = null;
     private ?SeoConfig $seo = null;
 
     /**
@@ -34,21 +34,17 @@ final class LaraInk
     {
         if (is_int($time)) {
             $this->cache = $time;
-        }
-        elseif (is_bool($time)) {
+        } elseif (is_bool($time)) {
             if ($time && config('lara-ink.cache.enable', false)) {
                 $this->cache = config('lara-ink.cache.ttl', 300);
-            }
-            else {
+            } else {
                 $this->cache = null;
             }
-        }
-        elseif ($time instanceof Carbon || $time instanceof CarbonInterface) {
+        } elseif ($time instanceof Carbon || $time instanceof CarbonInterface) {
             $now = Carbon::now();
             $diff = $time->getTimestamp() - $now->getTimestamp();
             $this->cache = $diff > 0 ? $diff : 0;
-        }
-        elseif ($time instanceof DateInterval) {
+        } elseif ($time instanceof DateInterval) {
             $now = Carbon::now();
             $future = (clone $now)->add($time);
             $diff = $future->getTimestamp() - $now->getTimestamp();
@@ -85,24 +81,28 @@ final class LaraInk
     /**
      * Sets the authentication requirement for the page.
      * 
-     * @param bool $auth  Whether the page requires authentication.
+     * @param bool $activeAuth  Whether the page requires authentication.
      * @return LaraInk
      */
-    public function auth(bool $auth): self
+    public function auth(bool $activeAuth = true): self
     {
-        $this->auth = $auth;
+        $this->auth = $activeAuth;
         return $this;
     }
 
     /**
      * Sets the middleware for the page.
      * 
-     * @param string $middleware  The middleware name.
+     * @param string|array $middleware<string|array<string>>  The middleware name or array of middleware names.
      * @return LaraInk
      */
-    public function middleware(string $middleware): self
+    public function middleware(string|array $middleware): self
     {
-        $this->middleware = $middleware;
+        if (is_string($middleware) && !empty($middleware)) {
+            $this->middleware = [$middleware];
+        } else {
+            $this->middleware = $middleware;
+        }
         return $this;
     }
 
@@ -146,7 +146,7 @@ final class LaraInk
                 twitter: $twitter
             );
         }
-        
+
         return $this;
     }
 

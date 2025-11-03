@@ -5,8 +5,7 @@
     "license": "MIT",
     "require": {
         "php": ">=8.3",
-        "laravel/framework": ">=11.0",
-        "nunomaduro/termwind": "^2.3"
+        "laravel/framework": ">=11.0"
     },
     "require-dev": {
         "pestphp/pest": "^4.0"
@@ -41,10 +40,10 @@
     "scripts": {
         "test": "pest",
         "post-install-cmd": [
-            "B7s\\LaraInk\\Console\\InstallScripts::install"
+            "@php artisan lara-ink:install"
         ],
         "post-update-cmd": [
-            "B7s\\LaraInk\\Console\\InstallScripts::install"
+            "@php artisan lara-ink:install"
         ]
     },
     "authors": [

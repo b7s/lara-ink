@@ -1,0 +1,3 @@
+# This file will be copied to the project root as part of the plugin
+# Add this line to your .gitignore if you want to ignore the Vite plugin:
+# /vite-plugin-lara-ink.js

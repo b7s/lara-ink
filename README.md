@@ -1,10 +1,14 @@
-# 🎨 LaraInk
-
-**A powerful DSL compiler that transforms Blade-like files into an independent SPA with Alpine.js, communicating with Laravel via REST API using Bearer Token authentication.**
+<div style="text-align: center;">
+    <h1>✒️ LaraInk</h1>
+</div>
 
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.3-blue)](https://php.net)
 [![Laravel Version](https://img.shields.io/badge/Laravel-%3E%3D11.0-red)](https://laravel.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+---
+
+A powerful DSL compiler that transforms Blade-like files into an independent SPA with [Alpine.js](https://alpinejs.dev), communicating with Laravel via REST API using Bearer Token authentication
 
 ---
 
@@ -18,6 +22,9 @@
 - 🌍 **i18n Ready** - Built-in translation system
 - 🎨 **Layout System** - Reusable layouts with nested folder support
 - 📱 **SPA Router** - Client-side navigation with prefetching
+- 🔧 **PHP Variables** - Define variables in PHP blocks, auto-converted to Alpine.js reactive data
+- 🛡️ **Type Safety** - Automatic type detection and validation for variables (string, int, float, bool, array, Collection, Eloquent)
+- 🧪 **With a lot of tests**
 
 ---
 
@@ -27,10 +34,17 @@
 composer require b7s/lara-ink
 ```
 
+Run the install command:
+
+```bash
+php artisan lara-ink:install
+```
+
 The package will automatically:
 - Create required directories (`resources/lara-ink/`, `public/build/`, etc.)
 - Publish configuration file to `config/lara-ink.php`
 - Set up default layout
+- Set up Vite plugin to project root
 
 ---
 
@@ -38,23 +52,36 @@ The package will automatically:
 
 ### 1. Create Your First Page
 
-Create `resources/lara-ink/pages/welcome.php`:
+Create `resources/lara-ink/pages/index.php`:
 
 ```php
 <?php
 ink_make()
-    ->title('Welcome')
+    ->title(__('app.welcome'))
     ->layout('app');
+
+$users = [
+    [
+        'id' => 1,
+        'name' => 'John Doe',
+    ],
+    [
+        'id' => 2,
+        'name' => 'Max Mustermann',
+    ],
+];
 ?>
 
-<div x-data="{ message: 'Hello from LaraInk!' }">
-    <h1 x-text="message"></h1>
+<div>
+    <h1>{{ __('app.full_welcome') }}</h1>
     
-    @if($isLoggedIn)
-        <p>Welcome back, {{ $user->name }}!</p>
-    @else
-        <p>Please log in to continue.</p>
-    @endif
+    @foreach($users as $user)
+        <p>
+            <a href="{{ ink_route('see-user', $user['id']) }}">
+                {{ $user['name'] }}
+            </a>
+        </p>
+    @endforeach
 </div>
 ```
 
@@ -66,7 +93,93 @@ php artisan lara-ink:build
 
 ### 3. Access Your App
 
-Open `http://your-app.test/index.html` in your browser!
+Open `http://your-app.test/` in your browser!
+
+If you are running inside Laravel, create a route to serve the index page:
+
+```php
+Route::get('/{path?}', function () {
+    require ink_path('index.html');
+})->where('path', '.*');
+```
+
+---
+
+## 🔥 Hot Reload Development
+
+LaraInk offers two ways to enable hot reload during development:
+
+### Option 1: Native Dev Command (for quick start)
+
+```bash
+php artisan lara-ink:dev
+```
+
+This will:
+- ✅ Watch for changes in `resources/lara-ink/**`
+- ✅ Auto-rebuild when files change
+- ✅ Show build status in terminal
+- ✅ No Node.js required
+
+### Option 2: Vite Integration (Recommended - Full Browser Hot Reload)
+
+For automatic browser refresh, integrate with Vite:
+
+**1. Install Vite (if not already installed):**
+
+```bash
+npm install -D vite laravel-vite-plugin
+```
+
+**2. The Vite plugin is automatically copied to your project root during `composer install`. Just import it in `vite.config.js`:**
+
+```javascript
+import { defineConfig } from 'vite';
+
+// Add this lines if not already added
+import laravel from 'laravel-vite-plugin';
+import laraInkPlugin from './vite-plugin-lara-ink.js';
+
+export default defineConfig({
+    plugins: [
+        // Add laravel plugin if not already added
+        laravel({
+            input: ['resources/css/app.css', 'resources/js/app.js'],
+            refresh: true,
+        }),
+        
+        // Add LaraInk Hot Reload - No configuration needed!
+        laraInkPlugin(),
+    ],
+});
+```
+
+**3. Start Vite dev server:**
+
+```bash
+npm run dev
+```
+
+The plugin will:
+- ✅ Build all pages on startup (if not already built)
+- ✅ Watch for changes in `resources/lara-ink/`
+- ✅ Rebuild only affected pages when you save
+- ✅ Automatically reload your browser
+
+**Smart Compilation:**
+- **Page changed** → Rebuilds only that page
+- **Layout changed** → Rebuilds all pages using that layout
+- **Component changed** → Rebuilds all pages using that component
+
+**Custom Configuration (Optional):**
+
+```javascript
+laraInkPlugin({
+    watchPaths: ['resources/lara-ink/**'],
+    buildCommand: 'php artisan lara-ink:build',
+    debounce: 1000  // milliseconds
+})
+```
 
 ---
 
@@ -77,9 +190,11 @@ Open `http://your-app.test/index.html` in your browser!
 - [Blade Directives](docs/blade-directives.md)
 - [Routing & Navigation](docs/routing.md)
 - [Authentication](docs/authentication.md)
+- [Middleware](docs/middleware.md)
 - [API Integration](docs/api-integration.md)
 - [Caching](docs/caching.md)
 - [Deployment](docs/deployment.md)
+- [Security Hardening](docs/security-hardening.md)
 
 ---
 
@@ -123,6 +238,46 @@ function profile() {
             const response = await lara_ink.newReq('/api/posts?page=2');
             const data = await response.json();
             this.posts.push(...data.posts);
+        }
+    }
+}
+</script>
+```
+
+### 🔐 Example: Protected Page with Middleware
+
+```php
+<?php
+ink_make()
+    ->title('Admin Dashboard')
+    ->middleware(['auth', 'verified', 'role:admin'])
+    ->cache(false);
+?>
+
+<div x-data="adminDashboard()">
+    <h1>Admin Dashboard</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>Total Users</h3>
+            <p x-text="stats.users"></p>
+        </div>
+        <div class="stat-card">
+            <h3>Active Sessions</h3>
+            <p x-text="stats.sessions"></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function adminDashboard() {
+    return {
+        stats: {},
+        
+        async init() {
+            const response = await lara_ink.newReq('/api/admin/stats');
+            const data = await response.json();
+            this.stats = data;
         }
     }
 }

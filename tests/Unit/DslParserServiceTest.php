@@ -14,6 +14,7 @@ ink_make()
     ->layout('dashboard/app')
     ->title('Test Page')
     ->auth(true);
+?>
 PHP;
 
     $tempFile = tempnam(sys_get_temp_dir(), 'test');
@@ -21,7 +22,7 @@ PHP;
 
     $parsed = $service->parse($tempFile);
 
-    expect($parsed->config->cache)->toBe(600);
+    expect($parsed->config->getCacheTtl())->toBe(600);
     expect($parsed->config->layout)->toBe('dashboard/app');
     expect($parsed->config->title)->toBe('Test Page');
     expect($parsed->config->auth)->toBeTrue();
@@ -59,7 +60,7 @@ test('extracts translations', function () {
 ink_make();
 
 <<<HTML
-<h1>{{ __('app.title') }}</h1>
+<h1>{{ trans('app.title') }}</h1>
 <p>{{ trans('app.description') }}</p>
 HTML;
 PHP;
@@ -82,6 +83,7 @@ test('extracts SEO config', function () {
 <?php
 ink_make()
     ->seo('Test SEO Title', 'Test description', 'test,keywords', '/image.jpg');
+?>
 PHP;
 
     $tempFile = tempnam(sys_get_temp_dir(), 'test');
@@ -89,9 +91,10 @@ PHP;
 
     $parsed = $service->parse($tempFile);
 
-    expect($parsed->config->seo)->not->toBeNull();
-    expect($parsed->config->seo['title'])->toBe('Test SEO Title');
-    expect($parsed->config->seo['description'])->toBe('Test description');
+    $seo = $parsed->config->getSeoConfig();
+    expect($seo)->not->toBeNull();
+    expect($seo['title'])->toBe('Test SEO Title');
+    expect($seo['description'])->toBe('Test description');
 
     unlink($tempFile);
 });

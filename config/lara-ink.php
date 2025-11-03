@@ -10,9 +10,9 @@ return [
     'default_layout' => 'app', // the "app.php" file inside "resources/lara-ink/layouts/"
 
     'output' => [
-        'dir' => 'public', // your-project-root-dir/public
-        'pages_dir' => 'public/pages', // your-project-root-dir/public/pages
-        'build_dir' => 'public/build', // your-project-root-dir/public/build
+        'dir' => 'public/lara-ink', // your-project-root-dir/public/lara-ink
+        'pages_dir' => 'public/lara-ink/pages',
+        'build_dir' => 'public/lara-ink/build',
     ],
 
     'cache' => [
@@ -22,7 +22,7 @@ return [
 
     'auth' => [
         'route' => [
-            'prefix' => '/api/ink',
+            'api_prefix' => '/api/ink',
             // Send user to this routes
             'login' => '/login',
             'unauthorized' => '/unauthorized',
@@ -33,13 +33,14 @@ return [
 
     // Include on project
     'scripts' => [
-        'alpinejs' => 'https://cdn.jsdelivr.net/npm/alpinejs@3.15.1/dist/cdn.min.js', // required
-        'others' => [ // array of links or path to script to include on bundle
-        ]
+        'beforeAlpine' => [
+            'https://cdn.jsdelivr.net/npm/@alpinejs/intersect@3.15.1/dist/cdn.min.js', // Required
+        ],
+        'alpinejs' => 'https://cdn.jsdelivr.net/npm/alpinejs@3.15.1/dist/cdn.min.js', // Required
+        'others' => []
     ],
 
-    'styles' => [
-        'others' => [ // array of links or path to style to include on bundle
-        ]
+    'styles' => [ // Set url to include on bundle
+        'others' => []
     ],
 ];

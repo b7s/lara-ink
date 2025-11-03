@@ -9,7 +9,13 @@ final class RouteInfo
     public function __construct(
         public readonly string $url,
         public readonly string $method = 'GET',
+        public readonly string $type = 'lara-ink',
     ) {}
+
+    public function __toString(): string
+    {
+        return $this->url;
+    }
 
     /**
      * @return array{url: string, method: string}
@@ -19,6 +25,7 @@ final class RouteInfo
         return [
             'url' => $this->url,
             'method' => strtoupper($this->method),
+            'type' => $this->type,
         ];
     }
 }

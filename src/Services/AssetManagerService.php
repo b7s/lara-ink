@@ -20,6 +20,21 @@ final class AssetManagerService
     {
         $scripts = [];
 
+        // Process beforeAlpine scripts first
+        $beforeAlpine = config('lara-ink.scripts.beforeAlpine', []);
+        if (!is_array($beforeAlpine)) {
+            throw new \RuntimeException('The configuration value "lara-ink.scripts.beforeAlpine" must be an array.');
+        }
+
+        foreach ($beforeAlpine as $index => $script) {
+            if (!is_string($script) || trim($script) === '') {
+                throw new \RuntimeException(sprintf('beforeAlpine script entry at index %d must be a non-empty string.', $index));
+            }
+
+            $scripts[] = $this->resolveScript($script, "beforeAlpine_{$index}");
+        }
+
+        // Then Alpine.js
         $alpineUrl = config('lara-ink.scripts.alpinejs');
         if (!is_string($alpineUrl) || trim($alpineUrl) === '') {
             throw new \RuntimeException('The configuration value "lara-ink.scripts.alpinejs" must be a non-empty string with the full url to the Alpine.js script.');
@@ -27,6 +42,7 @@ final class AssetManagerService
 
         $scripts[] = $this->storeRemoteScript($alpineUrl, 'alpinejs');
 
+        // Finally, other scripts
         $others = config('lara-ink.scripts.others', []);
         if (!is_array($others)) {
             throw new \RuntimeException('The configuration value "lara-ink.scripts.others" must be an array.');
@@ -140,8 +156,9 @@ final class AssetManagerService
 
     private function copyToBuild(string $sourcePath, string $originalIdentifier, string $alias, string $defaultExtension): string
     {
-        $buildDir = App::basePath(ink_config('output.build_dir', 'public/build'));
-        $vendorDir = $buildDir . DIRECTORY_SEPARATOR . 'vendor';
+        $buildDirConfig = ink_config('output.build_dir', 'public/build');
+        $buildDirAbsolute = ink_project_path($buildDirConfig);
+        $vendorDir = $buildDirAbsolute . DIRECTORY_SEPARATOR . 'vendor';
 
         File::ensureDirectoryExists($vendorDir);
 
@@ -163,7 +180,7 @@ final class AssetManagerService
         $destinationPath = $vendorDir . DIRECTORY_SEPARATOR . $fileName;
         File::copy($sourcePath, $destinationPath);
 
-        return 'build/vendor/' . $fileName;
+        return $this->toWebPath($destinationPath);
     }
 
     private function resolveLocalPath(string $value): string
@@ -182,5 +199,25 @@ final class AssetManagerService
         }
 
         return (bool) preg_match('/^[A-Za-z]:[\\\/]/', $path);
+    }
+
+    private function toWebPath(string $absolutePath): string
+    {
+        $projectRoot = rtrim(ink_project_path(), DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+
+        $normalized = str_replace('\\', '/', $absolutePath);
+        $projectNormalized = str_replace('\\', '/', $projectRoot);
+
+        if (str_starts_with($normalized, $projectNormalized)) {
+            $normalized = substr($normalized, strlen($projectNormalized));
+        }
+
+        $normalized = ltrim($normalized, '/');
+
+        if (str_starts_with($normalized, 'public/')) {
+            $normalized = substr($normalized, strlen('public/')) ?: '';
+        }
+
+        return '/' . ltrim($normalized, '/');
     }
 }
