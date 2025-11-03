@@ -256,6 +256,48 @@
     getAvailableLocales() {
       return Object.keys(this.translations);
     },
+
+    /**
+     * Get route parameters from current URL
+     * Matches the current path against registered routes and extracts parameter values
+     * @returns {object} Object with parameter names as keys and URL values
+     */
+    request() {
+      const currentPath = window.location.pathname;
+      const routes = this.routes || {};
+      
+      // Try to match current path against registered routes
+      for (const [slug, routeData] of Object.entries(routes)) {
+        const pattern = routeData.pattern || slug;
+        const params = routeData.params || [];
+        
+        if (params.length === 0) {
+          continue;
+        }
+        
+        // Convert [param] pattern to regex
+        // Escape special regex characters except [param]
+        let regexPattern = pattern
+          .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+          .replace(/\\\[([^\]]+)\\\]/g, '([^/]+)');
+        
+        regexPattern = '^' + regexPattern + '$';
+        
+        const regex = new RegExp(regexPattern);
+        const match = currentPath.match(regex);
+        
+        if (match) {
+          const result = {};
+          params.forEach((paramName, index) => {
+            result[paramName] = match[index + 1] || null;
+          });
+          return result;
+        }
+      }
+      
+      // No match found, return empty object
+      return {};
+    },
   });
 
   const resolvedInitialLocale =

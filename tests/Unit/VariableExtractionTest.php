@@ -6,7 +6,7 @@ use B7s\LaraInk\Services\DslParserService;
 use Illuminate\Support\Facades\App;
 
 test('DslParserService extracts simple string variables', function () {
-    $parserService = new DslParserService();
+    $parserService = app(DslParserService::class);
     $tempFile = tempnam(sys_get_temp_dir(), 'lara_ink_test_');
     
     $content = <<<'PHP'
@@ -35,7 +35,7 @@ PHP;
 });
 
 test('DslParserService extracts array variables', function () {
-    $parserService = new DslParserService();
+    $parserService = app(DslParserService::class);
     $tempFile = tempnam(sys_get_temp_dir(), 'lara_ink_test_');
     
     $content = <<<'PHP'
@@ -68,7 +68,7 @@ PHP;
 });
 
 test('DslParserService extracts multiple variables with different types', function () {
-    $parserService = new DslParserService();
+    $parserService = app(DslParserService::class);
     $tempFile = tempnam(sys_get_temp_dir(), 'lara_ink_test_');
     
     $content = <<<'PHP'
@@ -107,7 +107,7 @@ PHP;
 });
 
 test('DslParserService generates unique Alpine variable names', function () {
-    $parserService = new DslParserService();
+    $parserService = app(DslParserService::class);
     $tempFile = tempnam(sys_get_temp_dir(), 'lara_ink_test_');
     
     $content = <<<'PHP'
@@ -135,7 +135,7 @@ PHP;
 });
 
 test('DslParserService throws error on invalid PHP syntax', function () {
-    $parserService = new DslParserService();
+    $parserService = app(DslParserService::class);
     $tempFile = tempnam(sys_get_temp_dir(), 'lara_ink_test_');
     
     $content = <<<'PHP'

@@ -290,27 +290,6 @@ function adminDashboard() {
 
 Edit `config/lara-ink.php`:
 
-```php
-return [
-    'api_base_url' => env('LARAINK_API_URL', null),
-    'default_layout' => 'app',
-    
-    'cache' => [
-        'enable' => true,
-        'ttl' => 300, // 5 minutes
-    ],
-    
-    'auth' => [
-        'route' => [
-            'prefix' => '/api/ink',
-            'login' => '/login',
-            'unauthorized' => '/unauthorized',
-        ],
-        'token_ttl' => 900, // 15 minutes
-    ],
-];
-```
-
 ---
 
 ## 🧪 Testing

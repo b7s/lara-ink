@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use B7s\LaraInk\DTOs\PageConfig;
 use B7s\LaraInk\Services\DslParserService;
+use B7s\LaraInk\Services\DslParserService\ConfigExtractor;
 
 test('middleware can be configured as string', function () {
     $content = <<<'PHP'
@@ -13,12 +14,8 @@ ink_make()
 ?>
 PHP;
 
-    $parser = new DslParserService();
-    $reflection = new ReflectionClass($parser);
-    $method = $reflection->getMethod('extractConfig');
-    $method->setAccessible(true);
-    
-    $config = $method->invoke($parser, $content);
+    $configExtractor = app(ConfigExtractor::class);
+    $config = $configExtractor->extractConfig($content);
     
     expect($config)->toBeInstanceOf(PageConfig::class);
     expect($config->middleware)->toBe(['admin']);
@@ -32,12 +29,8 @@ ink_make()
 ?>
 PHP;
 
-    $parser = new DslParserService();
-    $reflection = new ReflectionClass($parser);
-    $method = $reflection->getMethod('extractConfig');
-    $method->setAccessible(true);
-    
-    $config = $method->invoke($parser, $content);
+    $configExtractor = app(ConfigExtractor::class);
+    $config = $configExtractor->extractConfig($content);
     
     expect($config)->toBeInstanceOf(PageConfig::class);
     expect($config->middleware)->toBe(['auth', 'verified', 'role:admin']);
@@ -51,12 +44,8 @@ ink_make()
 ?>
 PHP;
 
-    $parser = new DslParserService();
-    $reflection = new ReflectionClass($parser);
-    $method = $reflection->getMethod('extractConfig');
-    $method->setAccessible(true);
-    
-    $config = $method->invoke($parser, $content);
+    $configExtractor = app(ConfigExtractor::class);
+    $config = $configExtractor->extractConfig($content);
     
     expect($config)->toBeInstanceOf(PageConfig::class);
     expect($config->middleware)->toBeNull();

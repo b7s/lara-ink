@@ -12,7 +12,7 @@ final class ComponentDiscoveryTest extends TestCase
 {
     public function test_discovers_components_in_correct_path(): void
     {
-        $service = new ComponentService();
+        $service = app(ComponentService::class);
         
         // Get the expected path
         $expectedPath = ink_resource_path('components');
@@ -34,7 +34,7 @@ final class ComponentDiscoveryTest extends TestCase
     
     public function test_discovers_nested_components(): void
     {
-        $service = new ComponentService();
+        $service = app(ComponentService::class);
         
         $expectedPath = ink_resource_path('components');
         

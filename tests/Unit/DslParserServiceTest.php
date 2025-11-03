@@ -5,7 +5,7 @@ declare(strict_types=1);
 use B7s\LaraInk\Services\DslParserService;
 
 test('parses DSL config correctly', function () {
-    $service = new DslParserService();
+    $service = app(DslParserService::class);
     
     $content = <<<'PHP'
 <?php
@@ -31,7 +31,7 @@ PHP;
 });
 
 test('extracts HTML section', function () {
-    $service = new DslParserService();
+    $service = app(DslParserService::class);
     
     $content = <<<'PHP'
 <?php
@@ -53,7 +53,7 @@ PHP;
 });
 
 test('extracts translations', function () {
-    $service = new DslParserService();
+    $service = app(DslParserService::class);
     
     $content = <<<'PHP'
 <?php
@@ -77,7 +77,7 @@ PHP;
 });
 
 test('extracts SEO config', function () {
-    $service = new DslParserService();
+    $service = app(DslParserService::class);
     
     $content = <<<'PHP'
 <?php

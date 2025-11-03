@@ -197,18 +197,98 @@ Compiles to:
 
 ## Route Parameters
 
-Access route parameters:
+LaraInk automatically extracts route parameters from your file names using the `[param]` syntax.
 
+### File Naming Patterns
+
+Create dynamic routes by including parameters in your filename:
+
+```
+resources/lara-ink/pages/
+├── product.[slug].php           # Single parameter
+├── post.[slug].[id].php         # Multiple parameters
+├── user.[id].blade.php          # Works with .blade.php too
+└── admin/
+    └── edit.[category].[id].php # Nested paths with parameters
+```
+
+### Accessing Parameters
+
+Parameters are automatically available in both backend and frontend:
+
+**Backend (PHP):**
 ```php
 <?php
-ink_make()
-    ->title('User Profile')
-    ->params(['id']);
+// File: resources/lara-ink/pages/product.[slug].[id].php
+ink_make()->title('Product Details');
+
+// Access via Laravel request helper
+$slug = request()->slug;
+$id = request()->id;
+?>
+```
+
+**Frontend (Alpine.js):**
+```php
+<?php
+// File: resources/lara-ink/pages/product.[slug].[id].php
+ink_make()->title('Product Details');
 ?>
 
-<div x-data="{ userId: request().id }">
-    <h1>User Profile</h1>
-    <p>User ID: <span x-text="userId"></span></p>
+<div x-data="{ 
+    slug: lara_ink.request().slug,
+    id: lara_ink.request().id 
+}">
+    <h1>Product Details</h1>
+    <p>Slug: <span x-text="slug"></span></p>
+    <p>ID: <span x-text="id"></span></p>
+</div>
+```
+
+**Direct usage in Alpine directives:**
+```php
+<div x-data="{}">
+    <h1 x-text="'Product: ' + lara_ink.request().slug"></h1>
+    <p x-text="'ID: ' + lara_ink.request().id"></p>
+</div>
+```
+
+### How It Works
+
+1. **File Discovery**: LaraInk scans `resources/lara-ink/pages/` for `.php` and `.blade.php` files
+2. **Parameter Extraction**: Files with `[param]` in the name are registered as dynamic routes
+3. **Route Registration**: Parameters are converted to Laravel route parameters `{param}`
+4. **Runtime Access**: 
+   - Backend: `request()->param` (standard Laravel)
+   - Frontend: `lara_ink.request().param` (extracts from current URL)
+
+### Examples
+
+**User Profile:**
+```php
+// File: resources/lara-ink/pages/user.[id].php
+<?php ink_make()->title('User Profile'); ?>
+
+<div x-data="{ userId: lara_ink.request().id }">
+    <h1>User #<span x-text="userId"></span></h1>
+</div>
+```
+
+**Blog Post:**
+```php
+// File: resources/lara-ink/pages/blog.[category].[slug].php
+<?php ink_make()->title('Blog Post'); ?>
+
+<div x-data="{
+    category: lara_ink.request().category,
+    slug: lara_ink.request().slug
+}">
+    <nav>
+        <a :href="'/blog/' + category">← Back to <span x-text="category"></span></a>
+    </nav>
+    <article>
+        <h1 x-text="slug.replace(/-/g, ' ')"></h1>
+    </article>
 </div>
 ```
 

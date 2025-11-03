@@ -162,7 +162,13 @@ final class RouteService
     private function generateSlugFromPath(string $filePath, string $basePath): string
     {
         $relativePath = str_replace($basePath . DIRECTORY_SEPARATOR, '', $filePath);
-        $relativePath = str_replace('.php', '', $relativePath);
+        
+        // Remove .blade.php or .php extension
+        if (str_ends_with($relativePath, '.blade.php')) {
+            $relativePath = str_replace('.blade.php', '', $relativePath);
+        } else {
+            $relativePath = str_replace('.php', '', $relativePath);
+        }
 
         return $this->normalizeSlug($relativePath);
     }
