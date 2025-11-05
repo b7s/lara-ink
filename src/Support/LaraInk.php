@@ -35,7 +35,7 @@ final class LaraInk
         if (is_int($time)) {
             $this->cache = $time;
         } elseif (is_bool($time)) {
-            if ($time && config('lara-ink.cache.enable', false)) {
+            if ($time) {
                 $this->cache = config('lara-ink.cache.ttl', 300);
             } else {
                 $this->cache = null;

@@ -21,9 +21,9 @@ final class CacheService
         return $this->pageCacheTtls[$slug] ?? null;
     }
 
-    public function shouldCache(string $slug): bool
+    public function shouldCache(string $slug, ?bool $cache = null): bool
     {
-        if (!ink_config('cache.enable', true)) {
+        if ($cache === false || ($cache === null && !ink_config('cache.enable', false))) {
             return false;
         }
 

@@ -16,7 +16,7 @@ return [
     ],
 
     'cache' => [
-        'enable' => true,
+        'enable' => false, // Auto cache: disabled by default
         'ttl' => 300,
     ],
 

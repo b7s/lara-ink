@@ -58,23 +58,23 @@ Create `resources/lara-ink/pages/index.php`:
 <?php
 ink_make()
     ->title(__('app.welcome'))
-    ->layout('app');
+    ->layout('app')
+    ->auth(true)
+    ->middleware(['auth', 'role:admin'])
+    ->cache(now()->addMinutes(10));
 
-$users = [
-    [
-        'id' => 1,
-        'name' => 'John Doe',
-    ],
-    [
-        'id' => 2,
-        'name' => 'Max Mustermann',
-    ],
-];
+$users = User::all()->toArray();
+/*
+// It returns something like this:
+[
+    ['id' => 1, 'name' => 'John Doe'],
+    ['id' => 2, 'name' => 'Max Mustermann'],
+];*/
 ?>
 
 <div>
-    <h1>{{ __('app.full_welcome') }}</h1>
-    
+    <h1>{{ __('app.welcome_message', ['name' => auth()->user()->name]) }}</h1>
+
     @foreach($users as $user)
         <p>
             <a href="{{ ink_route('see-user', $user['id']) }}">
@@ -185,15 +185,15 @@ laraInkPlugin({
 
 ## 📖 Documentation
 
+- [Overview](docs/README.md)
 - [Getting Started](docs/getting-started.md)
-- [Page Configuration](docs/page-configuration.md)
-- [Blade Directives](docs/blade-directives.md)
-- [Routing & Navigation](docs/routing.md)
-- [Authentication](docs/authentication.md)
+- [Pages](docs/pages.md)
+- [Components](docs/components.md)
+- [Layouts](docs/layouts.md)
+- [Alpine.js Integration](docs/alpine.md)
 - [Middleware](docs/middleware.md)
-- [API Integration](docs/api-integration.md)
-- [Caching](docs/caching.md)
-- [Deployment](docs/deployment.md)
+- [Development Workflow](docs/development.md)
+- [Tailwind CSS](docs/tailwind-css.md)
 - [Security Hardening](docs/security-hardening.md)
 
 ---
