@@ -9,7 +9,7 @@
 
 ---
 
-Blade + Alpine.js + Laravel = reactive SPAs in seconds.
+**Blade + Alpine.js + Laravel = reactive SPAs in seconds.**
 
 A powerful DSL compiler that transforms Blade-like files into an independent SPA with [Alpine.js](https://alpinejs.dev), communicating with Laravel via REST API using Bearer Token authentication
 
