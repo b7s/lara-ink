@@ -1,5 +1,6 @@
-<div style="text-align: center;">
-    <h1>✒️ LaraInk</h1>
+<div style="text-align: center;" align="center">
+    <img src="docs/art/logo.webp" width="256" alt="[LaraInk]">
+    <h1>LaraInk</h1>
 </div>
 
 [![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.3-blue)](https://php.net)
@@ -7,6 +8,8 @@
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ---
+
+Blade + Alpine.js + Laravel = reactive SPAs in seconds.
 
 A powerful DSL compiler that transforms Blade-like files into an independent SPA with [Alpine.js](https://alpinejs.dev), communicating with Laravel via REST API using Bearer Token authentication
 
